@@ -56,13 +56,13 @@ nagabolkka-ai/
 | POST | `/ai/practice/feedback` |  연습 피드백 생성 | 연습 끝 |
 | POST | `/ai/lumi/message` |  루미 한마디 생성 | 퀘스트 완료 |
 | POST | `/ai/letters/weekly` | 루미의 편지 생성 | 주간 배치 |
+
 `/ai/health` 를 제외한 모든 요청은 X-Internal-Key 헤더가 필요합니다.
 상세 명세는 로컬 실행 후 Swagger(/docs)에서 확인할 수 있습니다. (운영 환경에서는 비활성화)
 
 ## 🚀 실행 방법
 ### 1. 요구 사항
 - Python 3.12 이상
-
 ### 2. 가상환경 및 패키지 설치
 ```
 git clone <https://github.com/nagabolkka/nagabolkka-ai.git>
@@ -71,7 +71,6 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
-​
 ### 3. 환경 변수 설정
 `.env.example` 을 복사해 프로젝트 루트에 `.env` 파일을 만들고 값을 채워주세요.
 ```
@@ -79,19 +78,16 @@ ENV=local
 OPENAI_API_KEY=
 AI_INTERNAL_KEY=
 ```
-​
 ### 4. 실행
 ```
 fastapi dev app/main.py
 ```
-​
 ### 5. 확인
 ```
 GET <http://localhost:8000/ai/health>
 → {"status":"ok"}
 ```
 Swagger: http://localhost:8000/docs
-
 ### 6. 테스트
 ```
 pytest
