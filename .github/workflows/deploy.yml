@@ -1,0 +1,72 @@
+name: Deploy AI to EC2
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-ai
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -q
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ap-southeast-2
+    steps:
+      - name: AWS 자격 증명
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: 러너 IP 를 보안 그룹 22번에 임시 추가
+        id: ip
+        run: |
+          IP=$(curl -s https://checkip.amazonaws.com)
+          echo "ip=$IP" >> "$GITHUB_OUTPUT"
+          aws ec2 authorize-security-group-ingress --group-id ${{ secrets.EC2_SG_ID }} \
+            --protocol tcp --port 22 --cidr "$IP/32"
+
+      - name: SSH 배포
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            set -e
+            cd ~/nagabolkka-ai
+            git fetch origin main
+            git reset --hard origin/main
+            docker compose up -d --build
+            docker image prune -f
+            # AI 는 외부에 공개하지 않으므로 컨테이너 헬스 상태로 확인 (최대 2분)
+            for i in $(seq 1 24); do
+              STATUS=$(docker inspect --format '{{.State.Health.Status}}' nagabolkka-ai || echo none)
+              echo "health: $STATUS"
+              [ "$STATUS" = "healthy" ] && exit 0
+              sleep 5
+            done
+            docker compose logs ai --tail 50
+            exit 1
+
+      - name: 임시 규칙 제거
+        if: always() && steps.ip.outputs.ip != ''
+        run: |
+          aws ec2 revoke-security-group-ingress --group-id ${{ secrets.EC2_SG_ID }} \
+            --protocol tcp --port 22 --cidr "${{ steps.ip.outputs.ip }}/32"

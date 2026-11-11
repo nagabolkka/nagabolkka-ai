@@ -1,0 +1,19 @@
+# EC2 에서 BE(nagabolkka-be) 와 같은 Docker 네트워크에 붙인다.
+# Spring 은 http://ai:8000 으로 호출, 외부(Caddy)에는 공개하지 않음 (ports 없음)
+services:
+  ai:
+    build: .
+    container_name: nagabolkka-ai
+    env_file: .env
+    environment:
+      ENV: prod
+    restart: unless-stopped
+    mem_limit: 200m
+    networks:
+      backend:
+        aliases: [ai]
+
+networks:
+  backend:
+    external: true
+    name: nagabolkka-be_default   # BE compose 기본 네트워크 (docker network ls 로 확인)
