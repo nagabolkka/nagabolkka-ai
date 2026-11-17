@@ -106,3 +106,36 @@ def test_lumi_template(client):
     r = client.post("/ai/lumi/message", json=body).json()
     assert r["fallback"] is True
     assert "바람이 시원했다" in r["message"] and len(r["message"]) <= 200
+    
+    
+# ---------- 주간 편지 ----------
+LETTER = {"nickname": "윤지", "outingCount": 3, "splitCount": 1, "pieceCount": 8,
+          "foundSlots": 6, "regionName": "바람의 숲", "restoration": 40, "moodAverage": 3.7}
+
+
+def test_letter_template(client):
+    r = client.post("/ai/letter/weekly", json=LETTER).json()
+    assert r["fallback"] is True
+    assert "3번" in r["body"] and "바람의 숲" in r["body"] and len(r["body"]) <= 400
+
+
+def test_letter_quiet_week_template(client):
+    body = {**LETTER, "outingCount": 0, "splitCount": 0, "moodAverage": None}
+    r = client.post("/ai/letter/weekly", json=body).json()
+    assert "조용히 쉬어갔구나" in r["body"]
+
+
+def test_letter_uses_openai(client, monkeypatch):
+    monkeypatch.setattr(openai_client, "chat_json", lambda s, u, max_tokens=0, timeout=None: {"body": "이번 주도 고마워."})
+    r = client.post("/ai/letter/weekly", json=LETTER).json()
+    assert r == {"body": "이번 주도 고마워.", "fallback": False}
+
+
+def test_letter_too_long_falls_back(client, monkeypatch):
+    monkeypatch.setattr(openai_client, "chat_json", lambda s, u, max_tokens=0, timeout=None: {"body": "가" * 401})
+    assert client.post("/ai/letter/weekly", json=LETTER).json()["fallback"] is True
+
+
+def test_letter_validation(client):
+    assert client.post("/ai/letter/weekly", json={**LETTER, "outingCount": 8}).status_code == 422
+    assert client.post("/ai/letter/weekly", json={**LETTER, "foundSlots": 26}).status_code == 422
