@@ -98,3 +98,31 @@ class LumiRequest(BaseModel):
 class LumiResponse(BaseModel):
     message: str = Field(description="루미 한마디 (최대 200자)")
     fallback: bool = Field(description="true = OpenAI 실패로 템플릿 사용")
+    
+
+# ---------- 주간 편지 ----------
+class LetterRequest(BaseModel):
+    nickname: str = Field(default="탐험가", max_length=30, description="표시 이름 (인사는 앱이 붙임 · 본문에 쓰지 않음)")
+    outingCount: int = Field(ge=0, le=7, description="지난주 완료한 퀘스트 수")
+    splitCount: int = Field(ge=0, le=7, description="지난주 쪼개서 완료한 수")
+    pieceCount: int = Field(ge=0, description="지금까지 모은 조각 수")
+    foundSlots: int = Field(ge=0, le=25, description="도감에서 찾은 칸 (25칸 중)")
+    regionName: str = Field(max_length=20, description="지금 지역 이름")
+    restoration: int = Field(ge=0, le=100, description="지금 지역 복원도 %")
+    moodAverage: float | None = Field(default=None, ge=1, le=5, description="지난주 기분 평균 (기록 없으면 null)")
+
+    model_config = ConfigDict(json_schema_extra={"examples": [{
+        "nickname": "윤지",
+        "outingCount": 3,
+        "splitCount": 1,
+        "pieceCount": 8,
+        "foundSlots": 6,
+        "regionName": "바람의 숲",
+        "restoration": 40,
+        "moodAverage": 3.7,
+    }]})
+
+
+class LetterResponse(BaseModel):
+    body: str = Field(description="편지 본문 (최대 400자 · 인사 · 서명 없이)")
+    fallback: bool = Field(description="true = OpenAI 실패로 템플릿 사용")
