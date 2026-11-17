@@ -1,7 +1,7 @@
 from fastapi import Depends, FastAPI
 
 from app.config import settings
-from app.routers import crisis, lumi, practice
+from app.routers import crisis, letter, lumi, practice
 from app.security import verify_internal_key
 
 if settings.env == "prod" and settings.ai_internal_key in ("", "local-dev-key"):
@@ -11,6 +11,7 @@ TAGS = [
     {"name": "crisis", "description": "위기 표현 감지 (회고 · 연습 메시지)"},
     {"name": "practice", "description": "연습실 상대역 대화 · 피드백"},
     {"name": "lumi", "description": "퀘스트 완료 후 루미 한마디"},
+    {"name": "letter", "description": "주간 루미의 편지 본문"},
     {"name": "health", "description": "서버 상태 확인 (키 없이 호출 가능)"},
 ]
 
@@ -28,6 +29,7 @@ protected = [Depends(verify_internal_key)]
 app.include_router(crisis.router, dependencies=protected)
 app.include_router(practice.router, dependencies=protected)
 app.include_router(lumi.router, dependencies=protected)
+app.include_router(letter.router, dependencies=protected)
 
 
 @app.get("/ai/health", tags=["health"], summary="서버 상태 확인")

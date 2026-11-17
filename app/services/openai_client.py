@@ -41,10 +41,10 @@ def moderation_scores(text: str) -> dict[str, float]:
         raise AiUnavailable(str(e)) from e
 
 
-def chat_json(system: str, user: str, max_tokens: int = 300) -> dict:
-    """system 지시 + user 데이터 → JSON 객체"""
+def chat_json(system: str, user: str, max_tokens: int = 300, timeout: float | None = None) -> dict:
+    """system 지시 + user 데이터 → JSON 객체 (timeout 없으면 openai_timeout)"""
     try:
-        res = _client().with_options(timeout=settings.openai_timeout).chat.completions.create(
+        res = _client().with_options(timeout=timeout or settings.openai_timeout).chat.completions.create(
             model=settings.openai_model,
             messages=[
                 {"role": "system", "content": system},
