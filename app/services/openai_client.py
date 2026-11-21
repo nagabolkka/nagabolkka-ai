@@ -59,3 +59,19 @@ def chat_json(system: str, user: str, max_tokens: int = 300, timeout: float | No
     except Exception as e:
         log.warning("chat 실패: %s", type(e).__name__)
         raise AiUnavailable(str(e)) from e
+
+
+# 연습 음성 → 글자 (원문 · 파일은 로그 · 저장 X)
+def transcribe(data: bytes, filename: str, content_type: str) -> str:
+    try:
+        res = _client().with_options(timeout=settings.stt_timeout).audio.transcriptions.create(
+            model=settings.stt_model,
+            file=(filename, data, content_type),
+            language="ko",
+        )
+        return res.text or ""
+    except AiUnavailable:
+        raise
+    except Exception as e:  # 타임아웃 · 429 · 형식 오류
+        log.warning("transcribe 실패: %s", type(e).__name__)
+        raise AiUnavailable(str(e)) from e

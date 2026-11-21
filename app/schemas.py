@@ -126,3 +126,9 @@ class LetterRequest(BaseModel):
 class LetterResponse(BaseModel):
     body: str = Field(description="편지 본문 (최대 400자 · 인사 · 서명 없이)")
     fallback: bool = Field(description="true = OpenAI 실패로 템플릿 사용")
+
+
+# 연습 음성 → 글자 
+class TranscribeResponse(BaseModel):
+    text: str | None = Field(description="말한 내용 (못 알아들었거나 OpenAI 실패면 null)")
+    fallback: bool = Field(description="OpenAI 실패 여부")

@@ -1,4 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, File, HTTPException, UploadFile
+
+from app.config import settings
 
 from app.schemas import (
     FeedbackRequest,
@@ -6,8 +8,10 @@ from app.schemas import (
     OpeningResponse,
     ReplyRequest,
     ReplyResponse,
+    TranscribeResponse,
 )
-from app.services import practice, scenarios
+from app.services import openai_client, practice, scenarios
+from app.services.openai_client import AiUnavailable
 
 router = APIRouter(prefix="/ai/practice", tags=["practice"])
 
@@ -60,3 +64,28 @@ def reply(req: ReplyRequest):
 )
 def feedback(req: FeedbackRequest):
     return practice.feedback(req.scenarioCode, req.history)
+
+
+# 연습 음성 → 글자
+# OpenAI 를 기다리는 동안 다른 요청 (헬스 체크 등) 이 막히지 않게 스레드에서 실행
+@router.post(
+    "/transcribe",
+    response_model=TranscribeResponse,
+    summary="연습 음성 → 글자",
+    description="""
+연습 대화에서 사용자가 녹음한 음성을 글자로 바꿉니다. (`multipart/form-data` · 필드 이름 `audio`)
+
+- 2MB 초과 · 빈 파일 → 400
+- 파일 · 글자는 저장하지 않고 로그에도 남기지 않습니다.
+- OpenAI 실패 → `{"text": null, "fallback": true}` (Spring 은 그대로 null 을 돌려주고, 프론트는 다시 말하기 · 직접 입력 안내)
+""",
+)
+def transcribe(audio: UploadFile = File(...)):
+    data = audio.file.read(settings.stt_max_bytes + 1)
+    if not data or len(data) > settings.stt_max_bytes:
+        raise HTTPException(status_code=400, detail="audio size")
+    try:
+        text = openai_client.transcribe(data, audio.filename or "voice.webm", audio.content_type or "audio/webm")
+        return TranscribeResponse(text=text.strip() or None, fallback=False)
+    except AiUnavailable:
+        return TranscribeResponse(text=None, fallback=True)
