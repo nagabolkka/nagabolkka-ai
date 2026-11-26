@@ -132,3 +132,21 @@ class LetterResponse(BaseModel):
 class TranscribeResponse(BaseModel):
     text: str | None = Field(description="말한 내용 (못 알아들었거나 OpenAI 실패면 null)")
     fallback: bool = Field(description="OpenAI 실패 여부")
+    
+
+# ---------- 루미 동행 통화 ----------
+class LiveSessionRequest(BaseModel):
+    nickname: str = Field(max_length=30, description="부를 이름")
+    missionTitle: str = Field(max_length=100, description="오늘 퀘스트 제목")
+    missionDescription: str | None = Field(default=None, max_length=300, description="오늘 퀘스트 설명 (루미가 미션에 맞게 돕도록)")
+    placeName: str | None = Field(default=None, max_length=60, description="목적지 이름 (없으면 null)")
+
+    model_config = ConfigDict(json_schema_extra={"examples": [{
+        "nickname": "윤지", "missionTitle": "북토크 뒷자리에서 듣기만 하기",
+        "missionDescription": "말하지 않아도 돼요. 뒷자리에 앉아 30분 듣고 와요.", "placeName": "아리랑 도서관"}]})
+
+
+class LiveSessionResponse(BaseModel):
+    clientSecret: str = Field(description="브라우저가 OpenAI Realtime 에 WebRTC 로 연결할 임시 키 (ek_…)")
+    expiresAt: int = Field(description="임시 키 만료 시각 (unix 초) · 이 안에 연결을 시작해야 함")
+    model: str = Field(description="통화 모델")
