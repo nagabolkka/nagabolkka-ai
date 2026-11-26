@@ -75,3 +75,17 @@ def transcribe(data: bytes, filename: str, content_type: str) -> str:
     except Exception as e:  # 타임아웃 · 429 · 형식 오류
         log.warning("transcribe 실패: %s", type(e).__name__)
         raise AiUnavailable(str(e)) from e
+
+# 루미 동행 통화 : Realtime 임시 키 (브라우저가 이 키로 WebRTC 연결 · 정식 키는 서버 밖으로 안 나감)
+def realtime_client_secret(session: dict) -> tuple[str, int]:
+    try:
+        res = _client().with_options(timeout=settings.realtime_timeout).realtime.client_secrets.create(
+            expires_after={"anchor": "created_at", "seconds": settings.realtime_key_seconds},
+            session=session,
+        )
+        return res.value, res.expires_at
+    except AiUnavailable:
+        raise
+    except Exception as e:  # 타임아웃 · 429 · 모델 이름 오류
+        log.warning("realtime 키 발급 실패: %s", type(e).__name__)
+        raise AiUnavailable(str(e)) from e
